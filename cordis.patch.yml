@@ -1,4 +1,4 @@
-# dsh-mcp-bridge bundle patch: insert the Host plugin row into the profile.
+﻿# dsh-mcp-host bundle patch: insert the Host plugin row into the profile.
 - insert:
     - id: mcp-bridge
-      name: dsh-mcp-bridge
+      name: dsh-mcp-host

@@ -1,4 +1,4 @@
-# dsh-mcp-bridge
+﻿# dsh-mcp-host
 
 Expose **any stdio MCP server** as native DeepSeek Harness tools. Host-only plugin, no browser UI, no npm dependencies.
 
@@ -22,7 +22,7 @@ The full set costs prompt space in every session, which is why it is not the def
 
 ```powershell
 cd E:\dsh
-.\rollback.cmd guard add "file:C:\path\to\dsh-mcp-bridge"
+.\rollback.cmd guard add "file:C:\path\to\dsh-mcp-host"
 .\rollback.cmd health
 ```
 
@@ -45,11 +45,11 @@ Open `edge://inspect/#remote-debugging` (or `chrome://inspect/#remote-debugging`
 
 ## Failure behaviour
 
-If the MCP server cannot start or does not answer, the plugin **registers nothing and logs the reason** — it never throws, so it cannot take the host boot down. Check `MCP_BRIDGE_INIT_TIMEOUT` and the stderr tail printed in the DSH console.
+If the MCP server cannot start or does not answer, the plugin **registers nothing and logs the reason** 鈥?it never throws, so it cannot take the host boot down. Check `MCP_BRIDGE_INIT_TIMEOUT` and the stderr tail printed in the DSH console.
 
 ## Privacy
 
-The bridge itself makes no network calls. It spawns exactly one child process (the MCP server you configured) and forwards bytes between it and the tool call. With `--cdp-endpoint`, the MCP server attaches to your existing browser, which means it can see and act on the tabs you have open — treat that as giving the agent your browser session.
+The bridge itself makes no network calls. It spawns exactly one child process (the MCP server you configured) and forwards bytes between it and the tool call. With `--cdp-endpoint`, the MCP server attaches to your existing browser, which means it can see and act on the tabs you have open 鈥?treat that as giving the agent your browser session.
 
 ## License
 

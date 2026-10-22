@@ -1,4 +1,4 @@
-﻿# dsh-mcp-host
+# dsh-mcp-host
 
 Expose **any stdio MCP server** as native DeepSeek Harness tools. Host-only plugin, no browser UI, no npm dependencies.
 

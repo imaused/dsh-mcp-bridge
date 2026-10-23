@@ -6,17 +6,26 @@ Built for one job: let a DSH agent drive a browser through the official **Micros
 
 ## What it does
 
-1. On load, spawns the MCP server once (default `npx --yes @playwright/mcp@latest --cdp-endpoint=msedge`).
-2. Calls `initialize` + `tools/list`, converts each tool's JSON Schema into a DSH parameter schema, and registers it with `ctx.tools.register`.
-3. Every tool call is forwarded as `tools/call`; the result is returned as JSON. Images (screenshots) are written to a temp file and returned as a path, not as base64.
+1. On load, spawns the MCP server once (default `npx --yes @playwright/mcp@latest --cdp-endpoint=msedge`) and calls `initialize` + `tools/list`.
+2. Registers **one** bootstrap tool, `edge_tools` (name configurable). Its description is deliberately short and states when to call it — and when not to.
+3. When the model calls `edge_tools`, the bridge registers the real `edge_*` tools **for that Agent only**, hides the bootstrap entry, and forwards every call to MCP `tools/call`. Screenshots are written to a temp file and returned as a path, not as base64.
+4. On `agent/disposed` (and on plugin dispose) the per-Agent tools are removed and the MCP child process is killed.
 
 Tools are renamed: `browser_navigate` becomes `edge_navigate` (prefix configurable).
+
+## Lazy loading (default)
+
+The 12-tool default set is **not** in the prompt until a browsing task needs it. A session that never touches a browser pays for one small schema (`edge_tools`), not twelve.
+
+- Set `MCP_BRIDGE_EAGER=1` to restore the old behaviour (register every tool at boot).
+- Activation is per Agent: the parent session and each subagent must call `edge_tools` independently.
+- After activation the bootstrap entry is hidden for that Agent (`tools.restrict({ deny })`), so the prompt goes back to a single, smaller surface.
 
 ## Default tool set (12 of Playwright's 25)
 
 `edge_navigate`, `edge_navigate_back`, `edge_snapshot`, `edge_click`, `edge_type`, `edge_fill_form`, `edge_press_key`, `edge_tabs`, `edge_take_screenshot`, `edge_evaluate`, `edge_wait_for`, `edge_close`.
 
-The full set costs prompt space in every session, which is why it is not the default. Set `MCP_BRIDGE_ALL=1` to expose everything.
+Set `MCP_BRIDGE_ALL=1` to expose everything the server offers.
 
 ## Install
 
@@ -44,7 +53,9 @@ Restart DSH (or rely on hot-load) and open a new session. The default MCP comman
 | --- | --- | --- |
 | `MCP_BRIDGE_COMMAND` | `npx --yes @playwright/mcp@latest --cdp-endpoint=msedge` | The MCP server command line (any stdio MCP server) |
 | `MCP_BRIDGE_PREFIX` | `edge` | Tool name prefix |
-| `MCP_BRIDGE_ALL` | unset | `1` = register every tool the server offers |
+| `MCP_BRIDGE_BOOTSTRAP` | `edge_tools` | Name of the single lazy-loading entry tool |
+| `MCP_BRIDGE_EAGER` | unset | `1` = register every tool at boot (old behaviour, no bootstrap) |
+| `MCP_BRIDGE_ALL` | unset | `1` = expose every tool the server offers |
 | `MCP_BRIDGE_TOOLS` | unset | Comma-separated allow-list of MCP tool names |
 | `MCP_BRIDGE_TIMEOUT` | `120000` | Per-call timeout (ms) |
 | `MCP_BRIDGE_INIT_TIMEOUT` | `30000` | Startup timeout (ms) |

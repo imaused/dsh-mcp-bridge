@@ -1,4 +1,4 @@
-# Security model — dsh-mcp-host 0.1.2
+# Security model — dsh-mcp-host 0.1.3
 
 One host-only DSH plugin. It registers tools that forward calls to **one** child process: the MCP server named by `MCP_BRIDGE_COMMAND`.
 

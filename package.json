@@ -1,6 +1,6 @@
 {
   "name": "dsh-mcp-host",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Expose a stdio MCP server (Playwright, Chrome DevTools, any MCP) as native DeepSeek Harness tools. Host-only, no client bundle.",
   "type": "module",
   "main": "lib/index.js",

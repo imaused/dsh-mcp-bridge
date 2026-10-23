@@ -1,4 +1,4 @@
-# Security model 鈥?dsh-mcp-host 0.1.0
+# Security model — dsh-mcp-host 0.1.2
 
 One host-only DSH plugin. It registers tools that forward calls to **one** child process: the MCP server named by `MCP_BRIDGE_COMMAND`.
 
@@ -19,7 +19,7 @@ spawn(exe, args, { cwd, env, stdio: ['pipe','pipe','pipe'], shell: process.platf
 
 ## What it downloads
 
-Nothing. `npx` may download `@playwright/mcp` on first run 鈥?that is the operator's command, not hidden behaviour.
+Nothing. `npx` may download `@playwright/mcp` on first run — that is the operator's command, not hidden behaviour.
 
 ## Failure containment
 

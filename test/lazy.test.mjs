@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { applyLazyBridge, DEFAULT_BOOTSTRAP, bootstrapDescription } from '../lib/lazy.js'
+import { applyLazyBridge, DEFAULT_BOOTSTRAP, bootstrapDescription, sameSession } from '../lib/lazy.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const FAKE = join(ROOT, 'test', 'fixtures', 'fake-mcp.mjs')
@@ -38,8 +38,8 @@ function fakeCtx() {
         if (i >= 0) list.splice(i, 1)
       }
     },
-    emit(event, payload) {
-      for (const fn of listeners.get(event) ?? []) fn(payload)
+    emit(event, ...args) {
+      for (const fn of listeners.get(event) ?? []) fn(...args)
     },
     effect(fn) { const dispose = fn(); if (typeof dispose === 'function') effects.push(dispose) },
     runEffects() { for (const dispose of effects.splice(0)) dispose() },
@@ -113,8 +113,56 @@ test('bootstrapDescription is compact and names the tools', () => {
 
 test('bootstrapDescription explains the auto-unload only when it is enabled', () => {
   assert.doesNotMatch(bootstrapDescription(['edge_click']), /unload/i)
-  const withRelease = bootstrapDescription(['edge_click'], { releaseMs: 180000 })
-  assert.match(withRelease, /unload again after 180s/)
+  const idle = bootstrapDescription(['edge_click'], { releaseMs: 180000 })
+  assert.match(idle, /unload again after 180s/)
+  const turnEnd = bootstrapDescription(['edge_click'], { releaseMs: 0, releaseOnTurnEnd: true })
+  assert.match(turnEnd, /when the turn ends/)
+  const both = bootstrapDescription(['edge_click'], { releaseMs: 180000, releaseOnTurnEnd: true })
+  assert.match(both, /when the turn ends \(or after 180s idle\)/)
+})
+
+test('the browser tools unload as soon as the browsing turn ends', async () => {
+  const ctx = fakeCtx()
+  const res = await applyLazyBridge(ctx, (d) => d, { ...OPTS, releaseMs: 0 })
+  assert.equal(res.releaseOnTurnEnd, true)
+  const bootstrap = ctx.registered[0]
+  const session = { header: { id: 'sess-a' }, id: 'sess-a' }
+  const agent = { ctx: fakeAgentCtx(), session }
+
+  await bootstrap.execute({}, { agent })
+  assert.equal(agent.ctx.registered.length, 5)
+
+  // Another session's turn must not touch this Agent.
+  ctx.emit('session/event', { header: { id: 'sess-b' } }, { type: 'turn/end', seq: 1 })
+  assert.equal(agent.ctx.registered.every((d) => d.__disposed), false, 'other session ignored')
+
+  ctx.emit('session/event', session, { type: 'turn/end', seq: 2 })
+  assert.ok(agent.ctx.registered.every((d) => d.__disposed), 'turn end unloads the tools')
+  assert.equal(agent.ctx.restricts.at(-1), 'lifted', 'the bootstrap entry is visible again')
+
+  const again = await bootstrap.execute({}, { agent })
+  assert.equal(again.activated, true, 'the next turn can reload with one call')
+  ctx.runEffects()
+})
+
+test('turn-end release can be turned off (idle backstop only)', async () => {
+  const ctx = fakeCtx()
+  const res = await applyLazyBridge(ctx, (d) => d, { ...OPTS, releaseOnTurnEnd: false, releaseMs: 0 })
+  assert.equal(res.releaseOnTurnEnd, false)
+  const session = { header: { id: 'sess-c' } }
+  const agent = { ctx: fakeAgentCtx(), session }
+  await ctx.registered[0].execute({}, { agent })
+  ctx.emit('session/event', session, { type: 'turn/end' })
+  assert.equal(agent.ctx.registered.every((d) => d.__disposed), false, 'no turn-end release')
+  ctx.runEffects()
+})
+
+test('sameSession matches by identity or by id', () => {
+  assert.equal(sameSession({ id: 'x' }, { id: 'x' }), true)
+  assert.equal(sameSession({ id: 'x' }, { header: { id: 'x' } }), true)
+  assert.equal(sameSession({ header: { id: 'x' } }, { header: { id: 'y' } }), false)
+  assert.equal(sameSession(undefined, undefined), true)
+  assert.equal(sameSession(undefined, { id: 'x' }), false)
 })
 
 test('the browser tools unload after an idle period and the bootstrap returns', async () => {
@@ -177,13 +225,16 @@ test('edge_close unloads the browser tools right away', async () => {
   ctx.runEffects()
 })
 
-test('releaseMs 0 disables unloading', async () => {
+test('release can be disabled entirely', async () => {
   const ctx = fakeCtx()
-  const res = await applyLazyBridge(ctx, (d) => d, { ...OPTS, releaseMs: 0 })
+  const res = await applyLazyBridge(ctx, (d) => d, { ...OPTS, releaseMs: 0, releaseOnTurnEnd: false })
   assert.equal(res.releaseMs, 0)
+  assert.equal(res.releaseOnTurnEnd, false)
   const bootstrap = ctx.registered[0]
-  const agent = { ctx: fakeAgentCtx() }
+  const session = { header: { id: 'sess-d' } }
+  const agent = { ctx: fakeAgentCtx(), session }
   await bootstrap.execute({}, { agent })
+  ctx.emit('session/event', session, { type: 'turn/end' })
   await delay(150)
   assert.equal(agent.ctx.registered.every((d) => d.__disposed), false, 'tools stay loaded')
   assert.ok(!agent.ctx.restricts.includes('lifted'), 'the bootstrap stays hidden')

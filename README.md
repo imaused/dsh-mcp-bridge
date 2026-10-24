@@ -9,7 +9,7 @@ Built for one job: let a DSH agent drive a browser through the official **Micros
 1. On load, spawns the MCP server once (default `npx --yes @playwright/mcp@latest --cdp-endpoint=msedge`) and calls `initialize` + `tools/list`.
 2. Registers **one** bootstrap tool, `edge_tools` (name configurable). Its description is deliberately short and states when to call it — and when not to.
 3. When the model calls `edge_tools`, the bridge registers the real `edge_*` tools **for that Agent only**, hides the bootstrap entry, and forwards every call to MCP `tools/call`. Screenshots are written to a temp file and returned as a path, not as base64.
-4. **Unload after use**: every browser call refreshes an idle countdown. When it expires (`MCP_BRIDGE_RELEASE_MS`, default 3 minutes), or right after `edge_close`, the per-Agent tools are removed and `edge_tools` becomes visible again — the MCP process and the open browser session stay alive, so reloading is instant. On `agent/disposed` (and on plugin dispose) the same teardown runs.
+4. **Unload after use**: when that turn ends (`session/event` → `turn/end`), the per-Agent tools are removed and `edge_tools` becomes visible again, so every later request is back to one small schema. `edge_close` releases immediately, and an idle countdown (`MCP_BRIDGE_RELEASE_MS`, default 3 min) is the backstop. The MCP process and the open browser session stay alive, so reloading is one cheap call. On `agent/disposed` (and on plugin dispose) the same teardown runs.
 
 Tools are renamed: `browser_navigate` becomes `edge_navigate` (prefix configurable).
 
@@ -25,10 +25,11 @@ The 12-tool default set is **not** in the prompt until a browsing task needs it.
 
 Loading is temporary, so a session that browsed once does not carry twelve schemas forever:
 
-- Every `edge_*` call restarts an idle countdown (`MCP_BRIDGE_RELEASE_MS`, default `180000` = 3 min). When it fires, that Agent's tools are disposed and `edge_tools` appears again; the next browsing task reloads them with one call.
-- `edge_close` unloads immediately (the page is closed, so the burst is over).
+- **Primary trigger: the end of the turn.** As soon as the session emits `turn/end`, that Agent's tools are disposed and `edge_tools` appears again — the next request only pays for the small bootstrap schema. The next browsing turn reloads them with one call.
+- **`edge_close`**: immediate unload (the page is closed, so the burst is over).
+- **Idle backstop**: if no `turn/end` ever arrives (non-interactive hosts, long-lived agents), the tools also unload after `MCP_BRIDGE_RELEASE_MS` without a browser call. `0` disables the backstop.
 - The MCP server process is **not** killed and the browser stays open — only the prompt surface shrinks, and reloading keeps tabs, logins and history.
-- `MCP_BRIDGE_RELEASE_MS=0` disables unloading (tools stay for the whole Agent lifetime, the 0.2.0 behaviour).
+- `MCP_BRIDGE_RELEASE_ON_TURN_END=0` (with `MCP_BRIDGE_RELEASE_MS=0`) restores the 0.2.0 behaviour: tools stay for the whole Agent lifetime.
 
 ## Default tool set (12 of Playwright's 25)
 
@@ -63,7 +64,8 @@ Restart DSH (or rely on hot-load) and open a new session. The default MCP comman
 | `MCP_BRIDGE_COMMAND` | `npx --yes @playwright/mcp@latest --cdp-endpoint=msedge` | The MCP server command line (any stdio MCP server) |
 | `MCP_BRIDGE_PREFIX` | `edge` | Tool name prefix |
 | `MCP_BRIDGE_BOOTSTRAP` | `edge_tools` | Name of the single lazy-loading entry tool |
-| `MCP_BRIDGE_RELEASE_MS` | `180000` | Idle ms before the browser tools unload themselves again; `0` = keep them until the Agent ends |
+| `MCP_BRIDGE_RELEASE_ON_TURN_END` | `1` | `0` = do not unload at turn end (idle backstop only) |
+| `MCP_BRIDGE_RELEASE_MS` | `180000` | Idle ms before the browser tools unload themselves again (backstop; `0` = off) |
 | `MCP_BRIDGE_EAGER` | unset | `1` = register every tool at boot (old behaviour, no bootstrap) |
 | `MCP_BRIDGE_ALL` | unset | `1` = expose every tool the server offers |
 | `MCP_BRIDGE_TOOLS` | unset | Comma-separated allow-list of MCP tool names |

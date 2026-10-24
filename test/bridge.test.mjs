@@ -41,7 +41,7 @@ test('applyBridge registers prefixed tools from the MCP server', async () => {
     env: {},
     timeoutMs: 10000,
   })
-  assert.deepEqual(res.registered.sort(), ['edge_fill_form', 'edge_navigate', 'edge_snapshot', 'edge_take_screenshot'])
+  assert.deepEqual(res.registered.sort(), ['edge_close', 'edge_fill_form', 'edge_navigate', 'edge_snapshot', 'edge_take_screenshot'])
   assert.deepEqual(ctx.registered.map((d) => d.name).sort(), res.registered.sort())
 
   const nav = ctx.registered.find((d) => d.name === 'edge_navigate')

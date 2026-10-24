@@ -17,6 +17,7 @@ const TOOLS = [
     description: 'Fill a form',
     inputSchema: { type: 'object', properties: { fields: { type: 'array', items: { type: 'object' }, description: 'fields' } } },
   },
+  { name: 'browser_close', description: 'Close the browser page', inputSchema: { type: 'object', properties: {} } },
 ]
 
 function send(msg) {

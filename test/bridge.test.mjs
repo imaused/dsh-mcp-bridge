@@ -4,7 +4,15 @@ import { existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { applyBridge, createMcpClient, normalizeResult, splitCommand } from '../lib/bridge.js'
+import {
+  applyBridge,
+  createMcpClient,
+  normalizeResult,
+  splitCommand,
+  resolveImageMode,
+  withImageArgs,
+  DEFAULT_COMMAND,
+} from '../lib/bridge.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const FAKE = join(ROOT, 'test', 'fixtures', 'fake-mcp.mjs')
@@ -97,4 +105,35 @@ test('client answers a call, then refuses calls after close', async () => {
   assert.ok(Array.isArray(res.content), 'expected a content array')
   client.close()
   await assert.rejects(() => client.callTool('browser_snapshot', {}), /not running|exited/i)
+})
+
+test('resolveImageMode only accepts omit/only and ignores the rest', () => {
+  assert.equal(resolveImageMode({}, {}), null)
+  assert.equal(resolveImageMode({ images: 'allow' }, {}), null)
+  assert.equal(resolveImageMode({ images: ' OFF ' }, {}), null)
+  assert.equal(resolveImageMode({ images: 'omit' }, {}), 'omit')
+  assert.equal(resolveImageMode({}, { MCP_BRIDGE_IMAGES: 'ONLY' }), 'only')
+  assert.equal(resolveImageMode({ images: 'omit' }, { MCP_BRIDGE_IMAGES: 'only' }), 'omit') // option wins
+})
+
+test('withImageArgs appends the flag only for Playwright MCP commands', () => {
+  const logged = []
+  const log = (m) => logged.push(m)
+
+  assert.equal(withImageArgs(DEFAULT_COMMAND, 'omit', { log }), `${DEFAULT_COMMAND} --image-responses=omit`)
+  assert.equal(withImageArgs(DEFAULT_COMMAND, null, { log }), DEFAULT_COMMAND)
+  assert.equal(
+    withImageArgs('npx --yes @playwright/mcp@0.0.83 --headless', 'only', { log }),
+    'npx --yes @playwright/mcp@0.0.83 --headless --image-responses=only',
+  )
+
+  // Already configured: the explicit command wins, nothing is appended.
+  const explicit = 'npx --yes @playwright/mcp@0.0.83 --image-responses=allow'
+  assert.equal(withImageArgs(explicit, 'omit', { log }), explicit)
+
+  // Not Playwright: leave it alone and say why.
+  const other = 'node some-other-mcp-server.mjs --port 1'
+  assert.equal(withImageArgs(other, 'omit', { log }), other)
+  assert.match(logged.join('\n'), /not a Playwright MCP command/)
+  assert.match(logged.join('\n'), /already sets --image-responses/)
 })

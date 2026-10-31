@@ -39,6 +39,15 @@ Loading is temporary, so a session that browsed once does not carry twelve schem
 
 Set `MCP_BRIDGE_ALL=1` to expose everything the server offers.
 
+## Screenshots: image, path, or both
+
+Playwright MCP ≥ 0.0.83 already saves every screenshot and returns text that contains its absolute path (`[Screenshot of viewport](C:\...\page-....png)`). The image part is what costs context: a 1280×720 capture is ~1.2k tokens, and it is re-sent with the tool result.
+
+- `MCP_BRIDGE_IMAGES=omit` appends `--image-responses=omit`: the tool result is the text + path only. Use it when the agent can read local files and does not need to look at the picture.
+- `MCP_BRIDGE_IMAGES=only` keeps the image and drops the accompanying text.
+- The flag is appended **only** when the command line is Playwright MCP (`@playwright/mcp` or `playwright-mcp`); other servers are left untouched, and an explicit `--image-responses` inside `MCP_BRIDGE_COMMAND` always wins.
+- Default is unchanged (`allow`, both text and image).
+
 ## Install
 
 From npm (published as `dsh-mcp-host`):
@@ -70,6 +79,7 @@ Restart DSH (or rely on hot-load) and open a new session. The default MCP comman
 | `MCP_BRIDGE_RELEASE_MS` | `180000` | Idle ms before the browser tools unload themselves again (backstop; `0` = off) |
 | `MCP_BRIDGE_EAGER` | unset | `1` = register every tool at boot (old behaviour, no bootstrap) |
 | `MCP_BRIDGE_ALL` | unset | `1` = expose every tool the server offers |
+| `MCP_BRIDGE_IMAGES` | unset | `omit` = drop screenshot images (text keeps the file path), `only` = drop the text; Playwright MCP commands only |
 | `MCP_BRIDGE_TOOLS` | unset | Comma-separated allow-list of MCP tool names |
 | `MCP_BRIDGE_TIMEOUT` | `120000` | Per-call timeout (ms) |
 | `MCP_BRIDGE_INIT_TIMEOUT` | `30000` | Startup timeout (ms) |

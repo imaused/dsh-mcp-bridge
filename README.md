@@ -4,6 +4,8 @@ Expose **any stdio MCP server** as native DeepSeek Harness tools. Host-only plug
 
 Built for one job: let a DSH agent drive a browser through the official **Microsoft Playwright MCP** server, attached to the Edge/Chrome you are already using.
 
+> **0.4.0** — the browser tools unload when the browsing turn ends (and right after `edge_close`); later requests carry only `edge_tools`. The MCP process and the open browser session stay alive, so reloading is one cheap call. See [Unload after use](#unload-after-use-default).
+
 ## What it does
 
 1. On load, spawns the MCP server once (default `npx --yes @playwright/mcp@latest --cdp-endpoint=msedge`) and calls `initialize` + `tools/list`.
@@ -49,7 +51,7 @@ From a local checkout (development):
 
 ```powershell
 cd E:\dsh
-.\rollback.cmd guard add "file:C:\path\to\dsh-mcp-host"
+.\rollback.cmd guard add "file:E:\dsh\dsh-mcp-bridge"
 .\rollback.cmd health
 ```
 

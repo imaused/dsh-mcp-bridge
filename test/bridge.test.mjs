@@ -10,6 +10,7 @@ import {
   normalizeResult,
   splitCommand,
   resolveImageMode,
+  buildToolDefinitions,
   withImageArgs,
   DEFAULT_COMMAND,
 } from '../lib/bridge.js'

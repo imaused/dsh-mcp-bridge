@@ -54,6 +54,10 @@ So `MCP_BRIDGE_IMAGES` does **not** save context in DSH. What it buys:
 
 Context only suffers where a client renders MCP image content (Claude Code, Cursor, …): there a 1280×720 capture is ~1.2k tokens. Those clients do not use this plugin — set `--image-responses=omit` in their own MCP config instead.
 
+## Output hygiene
+
+Playwright MCP writes every screenshot and accessibility snapshot into its output directory (`--output-dir`, default `<cwd>/.playwright-mcp`) and never rotates it, so a long browsing life leaves hundreds of files behind. After every tool call the bridge keeps the newest `MCP_BRIDGE_KEEP_OUTPUT` files (default 20) and deletes older `.png/.jpg/.jpeg/.webp/.yml/.yaml/.log` files; anything else in that directory is left alone. The screenshot just taken is always the newest, so reading it still works. `0` deletes all managed files; a missing directory or an unparsable value is a no-op.
+
 ## Install
 
 From npm (published as `dsh-mcp-host`):
@@ -86,6 +90,7 @@ Restart DSH (or rely on hot-load) and open a new session. The default MCP comman
 | `MCP_BRIDGE_EAGER` | unset | `1` = register every tool at boot (old behaviour, no bootstrap) |
 | `MCP_BRIDGE_ALL` | unset | `1` = expose every tool the server offers |
 | `MCP_BRIDGE_IMAGES` | unset | `omit` = upstream sends no image (the text keeps the path; saves the transfer and a duplicate temp file — **no context change in DSH**), `only` = drop the text; Playwright MCP commands only |
+| `MCP_BRIDGE_KEEP_OUTPUT` | `20` | Newest N files kept in Playwright's output dir after each call; `0` = delete all managed files |
 | `MCP_BRIDGE_TOOLS` | unset | Comma-separated allow-list of MCP tool names |
 | `MCP_BRIDGE_TIMEOUT` | `120000` | Per-call timeout (ms) |
 | `MCP_BRIDGE_INIT_TIMEOUT` | `30000` | Startup timeout (ms) |

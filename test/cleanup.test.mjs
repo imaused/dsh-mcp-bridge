@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtempSync, writeFileSync, readdirSync, utimesSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
 import { pruneOutput, parseOutputDir, resolveKeep, DEFAULT_KEEP, makePruner, pruneTempImages } from '../lib/cleanup.js'
 
@@ -42,10 +42,10 @@ test('pruneOutput is a no-op when the directory does not exist', () => {
 })
 
 test('parseOutputDir reads --output-dir and falls back to <cwd>/.playwright-mcp', () => {
-  const cwd = 'C:/work/profile'
+  const cwd = resolve('profile-dir')
   assert.equal(parseOutputDir('npx @playwright/mcp', cwd), join(cwd, '.playwright-mcp'))
-  assert.equal(parseOutputDir('npx @playwright/mcp --output-dir "C:/shots"', cwd), 'C:\\shots')
-  assert.equal(parseOutputDir('npx @playwright/mcp --output-dir=shots', cwd), join('C:\\work\\profile', 'shots'))
+  assert.equal(parseOutputDir('npx @playwright/mcp --output-dir "shots"', cwd), resolve(cwd, 'shots'))
+  assert.equal(parseOutputDir('npx @playwright/mcp --output-dir=shots', cwd), resolve(cwd, 'shots'))
 })
 
 test('resolveKeep reads the env safely', () => {

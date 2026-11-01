@@ -1,6 +1,6 @@
 {
   "name": "dsh-mcp-host",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Expose a stdio MCP server as native DeepSeek Harness tools, with the official Playwright MCP preset for driving the Edge/Chrome you already use. Tools load lazily: one edge_tools entry stays in the prompt and the real tools appear only when a task needs a browser, then unload again when that turn ends. Host-only, no client bundle and no npm dependencies.",
   "type": "module",
   "main": "lib/index.js",

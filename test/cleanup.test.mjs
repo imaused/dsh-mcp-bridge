@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync, readdirSync, utimesSync, existsSync, rmSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { pruneOutput, parseOutputDir, resolveKeep, DEFAULT_KEEP, makePruner } from '../lib/cleanup.js'
+import { pruneOutput, parseOutputDir, resolveKeep, DEFAULT_KEEP, makePruner, pruneTempImages } from '../lib/cleanup.js'
 
 function fixture(specs) {
   const dir = mkdtempSync(join(tmpdir(), 'mcp-cleanup-'))
@@ -61,6 +61,15 @@ test('makePruner uses the command output dir and the env limit', () => {
   const prune = makePruner(`npx @playwright/mcp --output-dir "${dir}"`, { MCP_BRIDGE_KEEP_OUTPUT: '1' })
   assert.equal(existsSync(join(dir, 'a.png')), true)
   const res = prune()
+  assert.equal(res.kept, 1)
+  assert.equal(readdirSync(dir).length, 1)
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test('pruneTempImages prunes the bridge temp copies', () => {
+  const dir = fixture(['s1.png', 's2.png', 's3.png'])
+  const res = pruneTempImages(1, dir)
+  assert.equal(res.removed, 2)
   assert.equal(res.kept, 1)
   assert.equal(readdirSync(dir).length, 1)
   rmSync(dir, { recursive: true, force: true })

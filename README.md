@@ -56,7 +56,7 @@ Context only suffers where a client renders MCP image content (Claude Code, Curs
 
 ## Output hygiene
 
-Playwright MCP writes every screenshot and accessibility snapshot into its output directory (`--output-dir`, default `<cwd>/.playwright-mcp`) and never rotates it, so a long browsing life leaves hundreds of files behind. After every tool call the bridge keeps the newest `MCP_BRIDGE_KEEP_OUTPUT` files (default 20) and deletes older `.png/.jpg/.jpeg/.webp/.yml/.yaml/.log` files; anything else in that directory is left alone. The screenshot just taken is always the newest, so reading it still works. `0` deletes all managed files; a missing directory or an unparsable value is a no-op.
+Playwright MCP writes every screenshot and accessibility snapshot into its output directory (`--output-dir`, default `<cwd>/.playwright-mcp`) and never rotates it, so a long browsing life leaves hundreds of files behind. The bridge prunes **once at plugin load and after every tool call**: it keeps the newest `MCP_BRIDGE_KEEP_OUTPUT` files in that directory and in its own temp image directory (`%TEMP%\dsh-mcp-bridge`), deleting older `.png/.jpg/.jpeg/.webp/.yml/.yaml/.log` files. Anything else in those directories is left alone, and the screenshot just taken is always the newest, so reading it still works. `0` deletes all managed files; a missing directory or an unparsable value is a no-op.
 
 ## Install
 

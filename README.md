@@ -41,13 +41,13 @@ Set `MCP_BRIDGE_ALL=1` to expose everything the server offers.
 
 ## Screenshots: image, path, or both
 
-Playwright MCP ≥ 0.0.83 saves every screenshot to disk and returns text containing its absolute path (`[Screenshot of viewport](C:\...\page-....png)`), plus an image part unless told otherwise.
+Playwright MCP ≥ 0.0.83 saves every screenshot to disk and returns text containing the path (`[Screenshot of viewport](.playwright-mcp\page-....png)`), plus an image part unless told otherwise. The path is relative to the MCP server's working directory (on this machine the profile dir) unless `MCP_BRIDGE_COMMAND` sets an absolute `--output-dir`.
 
 **This plugin never forwards that image part.** `normalizeResult` writes images to a temp file and every tool renders JSON text, so the model sees a path (~26 tokens), not an image. A screenshot has always been cheap here.
 
 So `MCP_BRIDGE_IMAGES` does **not** save context in DSH. What it buys:
 
-- `MCP_BRIDGE_IMAGES=omit` — the upstream stops sending the image at all: ~12 K fewer base64 characters over stdio per screenshot, and one less duplicate temp file. Pick it when the agent never looks at the picture (it still receives the path).
+- `MCP_BRIDGE_IMAGES=omit` — the upstream stops sending the image at all: ~12 K fewer base64 characters over stdio per screenshot, and one less duplicate temp file. Pick it when the agent never looks at the picture. **Caveat:** with `omit` the only path is the relative one inside the text, because the plugin's absolute temp copy (`images[]`) only exists in the default mode — an agent that wants to open screenshots should keep `allow`.
 - `MCP_BRIDGE_IMAGES=only` — keep the image, drop the accompanying text.
 - Appended **only** to Playwright MCP command lines (`@playwright/mcp` or `playwright-mcp`); other servers are left untouched, and an explicit `--image-responses` inside `MCP_BRIDGE_COMMAND` always wins.
 - Default is unchanged (`allow`).

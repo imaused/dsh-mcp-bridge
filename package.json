@@ -1,6 +1,6 @@
 {
   "name": "dsh-mcp-host",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "Expose a stdio MCP server as native DeepSeek Harness tools, with the official Playwright MCP preset for driving the Edge/Chrome you already use. Tools load lazily: one edge_tools entry stays in the prompt and the real tools appear only when a task needs a browser, then unload again when that turn ends. Host-only, no client bundle and no npm dependencies.",
   "type": "module",
   "main": "lib/index.js",
@@ -20,8 +20,8 @@
     "node": ">=18"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-tools": ">=0.1.0-rc.6 <0.2.0-0 || >=0.2.0-rc.1 <0.3.0-0"
+    "@deepseek-ai/cordis": ">=4.0.0",
+    "@deepseek-ai/dsh-tools": ">=0.1.0-rc.6"
   },
   "keywords": [
     "dsh-plugin",
@@ -37,7 +37,7 @@
     "url": "git+https://github.com/imaused/dsh-mcp-bridge.git"
   },
   "scripts": {
-    "test": "node --test \"test/*.test.mjs\""
+    "test": "node --test test/bridge.test.mjs test/cleanup.test.mjs test/convert.test.mjs test/lazy.test.mjs test/wiring.test.mjs"
   },
   "dsh": {
     "bundle": {

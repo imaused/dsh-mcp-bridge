@@ -1,7 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync } from 'node:fs'
+import { existsSync, rmSync } from 'node:fs'
 import { join, dirname } from 'node:path'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 
 import {
@@ -106,6 +107,36 @@ test('client answers a call, then refuses calls after close', async () => {
   assert.ok(Array.isArray(res.content), 'expected a content array')
   client.close()
   await assert.rejects(() => client.callTool('browser_snapshot', {}), /not running|exited/i)
+})
+
+test('client fails pending calls fast when the server cannot start', async () => {
+  const client = createMcpClient({ command: 'definitely-not-a-real-mcp-binary-xyz', timeoutMs: 5000 })
+  // POSIX: spawn 'error' -> "failed to start". Windows (shell:true): cmd.exe
+  // exits code 1 right away. Either way the call must reject promptly.
+  await assert.rejects(() => client.callTool('browser_snapshot', {}), /failed to start|exited|not running/)
+})
+
+test('an unparsable timeout falls back to the default instead of timing out instantly', async () => {
+  const client = createMcpClient({ command: `node "${FAKE}"`, timeoutMs: Number('garbage') })
+  await client.initialize(Number('garbage'))
+  const res = await client.callTool('browser_snapshot', {})
+  assert.ok(Array.isArray(res.content), 'expected a content array')
+  client.close()
+})
+
+test('normalizeResult gives concurrent screenshots distinct temp files', () => {
+  const dir = join(tmpdir(), 'dsh-mcp-bridge')
+  const realNow = Date.now
+  try {
+    Date.now = () => 1234567890 // force the same-millisecond collision
+    const a = normalizeResult({ content: [{ type: 'image', data: 'AAAA' }] })
+    const b = normalizeResult({ content: [{ type: 'image', data: 'AAAA' }] })
+    assert.notEqual(a.images[0], b.images[0])
+    assert.ok(existsSync(a.images[0]) && existsSync(b.images[0]), 'both files must exist')
+  } finally {
+    Date.now = realNow
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('resolveImageMode only accepts omit/only and ignores the rest', () => {

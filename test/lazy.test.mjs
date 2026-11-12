@@ -104,6 +104,15 @@ test('lazy bridge is inert when the server cannot start', async () => {
   assert.match(String(res.error), /./)
 })
 
+test('lazy bridge registers nothing when no tool matches the allow-list', async () => {
+  const ctx = fakeCtx()
+  const res = await applyLazyBridge(ctx, (d) => d, { ...OPTS, allow: ['nope'] })
+  assert.deepEqual(res.tools, [])
+  assert.deepEqual(res.registered, [])
+  assert.equal(ctx.registered.length, 0, 'no bootstrap without tools to load')
+  ctx.runEffects()
+})
+
 test('bootstrapDescription is compact and names the tools', () => {
   const text = bootstrapDescription(['edge_navigate', 'edge_click'])
   assert.match(text, /edge_navigate, edge_click/)

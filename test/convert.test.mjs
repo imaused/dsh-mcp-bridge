@@ -16,6 +16,17 @@ test('propertySpec falls back to json for anything unmappable', () => {
   assert.deepEqual(propertySpec(undefined), { type: 'json' })
 })
 
+test('propertySpec maps array enums to json and passes scalar enums through', () => {
+  // An enum'd array must never become a scalar: the server expects an array.
+  assert.deepEqual(propertySpec({ type: 'array', enum: ['a', 'b'] }), { type: 'json' })
+  assert.deepEqual(
+    propertySpec({ type: 'string', enum: ['left', 'right'] }),
+    { type: 'string', enum: ['left', 'right'] },
+  )
+  // Odd enum entries are dropped instead of risking a registration rejection.
+  assert.deepEqual(propertySpec({ type: 'string', enum: ['x', { weird: true }] }), { type: 'string' })
+})
+
 test('toDshParameters honours required[]', () => {
   const params = toDshParameters({
     type: 'object',
@@ -55,4 +66,15 @@ test('planTools filters by allow-list unless all=true', () => {
   assert.equal(planTools(tools, { prefix: 'edge', all: true }).length, 3)
   assert.equal(planTools(tools, { prefix: 'edge', allow: [] }).length, 3, 'empty allow-list means everything')
   assert.equal(planTools(tools, { prefix: 'edge', allow: ['nope'] }).length, 0)
+})
+
+test('planTools never emits two tools with the same DSH name', () => {
+  const tools = [
+    { name: 'browser_navigate', description: 'a', inputSchema: { properties: {} } },
+    { name: 'navigate', description: 'b', inputSchema: { properties: {} } },
+    { name: 'browser_navigate', description: 'dup', inputSchema: { properties: {} } },
+  ]
+  const picked = planTools(tools, { prefix: 'edge', all: true })
+  assert.deepEqual(picked.map((p) => p.name), ['edge_navigate'])
+  assert.equal(picked[0].mcpName, 'browser_navigate', 'first occurrence wins')
 })
